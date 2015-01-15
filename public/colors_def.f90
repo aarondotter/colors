@@ -8,10 +8,10 @@ module colors_def
   type bc_table
      character(len=256) :: filename
      character(len=12), allocatable :: labels(:)
-     integer :: num_Av, num_filter, num_lines, num_T, num_g
+     integer :: num_Av, num_Rv, num_filter, num_lines, num_T, num_g
      integer, allocatable :: index(:,:)
-     real(sp), allocatable :: logT(:), logg(:), Av(:), grid(:,:), BC(:,:,:)
-     real(sp) :: Rv, FeH, alphaFe
+     real(sp), allocatable :: logT(:), logg(:), Av(:), Rv(:), grid(:,:), BC(:,:,:,:)
+     real(sp) :: FeH, alphaFe
   end type bc_table
     
 end module colors_def

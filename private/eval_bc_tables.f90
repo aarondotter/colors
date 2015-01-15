@@ -7,16 +7,15 @@ module eval_bc_tables
 contains
 
       
-  subroutine eval_one_bc(t,logT,logg,Av,res,ierr)
+  subroutine eval_one_bc(t,logT,logg,Av,Rv,res,ierr)
     type(bc_table), intent(in) :: t
-    real(sp), intent(in) :: logT, logg, Av
+    real(sp), intent(in) :: logT, logg, Av, Rv
     real(sp), intent(out) :: res(:) !t% num_filter
     integer, intent(out) :: ierr
-    integer :: i, i11, i12, i21, i22, ig=1, iT=1, iAv, j
-    real(sp) :: q(4), mag1, mag2, a, b
-    real(sp), allocatable :: res1(:), res2(:)
+    integer :: i, i11, i12, i21, i22, ig=1, iT=1
+    integer :: j, j11, j12, j21, j22, iAv=1, iRv=1
+    real(sp) :: q(4), r(4), mag1, mag2, a, b
 
-    iAv=1
     ierr = 0
     res = 0.
 
@@ -41,6 +40,12 @@ contains
        endif
     enddo
 
+    !for bilinear interpolation in logT and logg
+    i11 = t% index(iT  ,ig  )
+    i21 = t% index(iT+1,ig  )
+    i12 = t% index(iT  ,ig+1)
+    i22 = t% index(iT+1,ig+1)
+
     do i=1, t% num_Av - 1
        if(Av >= t% Av(i) .and. Av < t% Av(i+1))then
           iAv=i
@@ -48,33 +53,41 @@ contains
        endif
     enddo
 
-    i11 = t% index(iT  ,ig  )
-    i21 = t% index(iT+1,ig  )
-    i12 = t% index(iT  ,ig+1)
-    i22 = t% index(iT+1,ig+1)
-
-    !temporary results storage
-    allocate(res1(t% num_filter), res2(t% num_filter))
-
-    !do binlinear interpolation for logT, logg
-    do i=1,t% num_filter
-       q(1) = t% BC(i11,i,iAv)
-       q(2) = t% BC(i21,i,iAv)
-       q(3) = t% BC(i12,i,iAv)
-       q(4) = t% BC(i22,i,iAv)
-       res1(i) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
-
-       q(1) = t% BC(i11,i,iAv+1)
-       q(2) = t% BC(i21,i,iAv+1)
-       q(3) = t% BC(i12,i,iAv+1)
-       q(4) = t% BC(i22,i,iAv+1)
-       res2(i) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
+    do i=1, t% num_Rv - 1
+       if(Rv >= t% Rv(i) .and. Rv < t% Av(i+1))then
+          iRv=i
+          exit
+       endif
     enddo
 
-    !last do Av interpolation
-    a = (t% Av(iAv+1)-Av)/(t% Av(iAv+1)-t% Av(iAv))
-    b = 1.0 - a
-    res = a*res1 + b*res2
+    !for bilinear interpolation in Av and Rv
+    j11 = t% index(iAv  ,iRv  )
+    j21 = t% index(iAv+1,iRv  )
+    j12 = t% index(iAv  ,iRv+1)
+    j22 = t% index(iAv+1,iRv+1)
+
+    !do binlinear interpolation for logT, logg and then for Av, Rv
+    do i=1,t% num_filter
+       !first steps are bilinear interpolation in logT, logg
+       q(1) = t% BC(i,i11,iAv  ,iRv  ); q(2) = t% BC(i,i21,iAv  ,iRv  )
+       q(3) = t% BC(i,i12,iAv  ,iRv  ); q(4) = t% BC(i,i22,iAv  ,iRv  )
+       r(1) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
+
+       q(1) = t% BC(i,i11,iAv+1,iRv  ); q(2) = t% BC(i,i21,iAv+1,iRv  )
+       q(3) = t% BC(i,i12,iAv+1,iRv  ); q(4) = t% BC(i,i22,iAv+1,iRv  )
+       r(2) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
+
+       q(1) = t% BC(i,i11,iAv  ,iRv+1); q(2) = t% BC(i,i21,iAv  ,iRv+1)
+       q(3) = t% BC(i,i12,iAv  ,iRv+1); q(4) = t% BC(i,i22,iAv  ,iRv+1)
+       r(3) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
+
+       q(1) = t% BC(i,i11,iAv+1,iRv+1); q(2) = t% BC(i,i21,iAv+1,iRv+1)
+       q(3) = t% BC(i,i12,iAv+1,iRv+1); q(4) = t% BC(i,i22,iAv+1,iRv+1)
+       r(4) = bilinear(t% logT(iT), t% logT(iT+1), logT, t% logg(ig), t% logg(ig+1), logg, q)
+
+       !final step is bilinear in Av, Rv
+       res(i) = bilinear(t% Av(iAv), t% Av(iAv+1), Av, t% Rv(iRv), t% Rv(iRv+1), Rv, r)
+    enddo
     
   end subroutine eval_one_bc
 

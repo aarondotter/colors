@@ -19,7 +19,7 @@ endif
 
 LOCAL_INCLUDES = -I$(LOCAL_LIB_DIR)
 LOAD_LOCAL = -L$(LOCAL_LIB_DIR) -lcolors
-LOAD_OTHER = -L$(MESA_LIB_DIR) -linterp_2d -linterp_1d -lnum $(LOAD_MATRIX)
+LOAD_OTHER = #-L$(MESA_LIB_DIR) -linterp_2d -linterp_1d -lnum $(LOAD_MATRIX)
 
 #################################################################
 
