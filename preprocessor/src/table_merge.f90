@@ -64,7 +64,6 @@ program table_merge
   outfile='junk.kur'
   call writeBC(kur,outfile)
 
-
   master_mags = -99.
   do j=1,nT
      !for blackbody only, we ignore logg
