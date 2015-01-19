@@ -9,87 +9,153 @@ program table_merge
   integer :: ierr, i, j, k
   
   type bc_table
-     real(dp), allocatable :: mags(:,:,:,:), Teff(:), logg(:), Av(:), Rv(:)
-     real(dp) :: FeH
+     real(sp), allocatable :: mags(:,:,:,:), Teff(:), logg(:), Av(:), Rv(:)
+     real(sp) :: FeH
      character(len=12), allocatable :: header(:)
      integer :: num_Rv, num_Av, num_spectra, num_filters
   end type bc_table
-  type(bc_table) :: bb, kur
+  type(bc_table) :: blackbody, atlas, rauch, final
 
-  integer, parameter :: nT=106, ng=23
-  real(dp) :: master_Teff(nT), master_logg(ng), master_mags(nT,ng)
+  integer, parameter :: nT=106, ng=18
+  real(sp) :: master_Teff(nT), master_logg(ng)
 
+  if(command_argument_count()<2)then
+     stop 'not enough command arguments. specify input ATLAS file and output file'
+  endif
 
-!set the temperature and gravity scales for MIST bolometric correction tables
-  master_Teff(1) = 1.0d3; master_Teff(2) = 1.5d3; master_Teff(3) = 2.0d3; master_Teff(4)=2.5d3
-  master_Teff(5) = 2.8d3; master_Teff(6) = 3.0d3; master_Teff(7) = 3.2d3; master_Teff(8)=3.5d3
-       
-  !  3,750 to    13,000
-  do i=9,46
-     master_Teff(i) = master_Teff(i-1) + 2.5d2
-  enddo
+  call get_command_argument(1, infile)
+  call get_command_argument(2,outfile)
 
-  ! 14,000 to    50,000
-  do i=47,83
-     master_Teff(i) = master_Teff(i-1) + 1.0d3
-  enddo
-  
-  ! 60,000 to   200,000
-  do i=84,98
-     master_Teff(i) = master_Teff(i-1) + 1.0d4
-  enddo
-
-  !200,000 to 1,000,000
-  do i=99,nT
-     master_Teff(i) = master_Teff(i-1) + 1.0d5
-  enddo
-  
-  do i=1,ng
-     master_logg(i) = -1.0d0 + 0.5d0*real(i-1,kind=dp)
-  enddo
-
-  write(*,*) master_logg
-  write(*,*) master_Teff
-
+  call readBC(atlas,infile)
 
   infile='/home/dotter/science/colors/preprocessor/data/blackbody.UBVRIJHKsKp'
-  call readBC(bb,infile)
+  call readBC(blackbody,infile)
 
-  infile='/home/dotter/science/colors/preprocessor/data/Zp0d0ap0.UBVRIJHKsKp'
-  call readBC(kur,infile)
 
-  outfile='junk.bb'
-  call writeBC(bb,outfile)
+  infile='/home/dotter/science/colors/preprocessor/data/rauch_solar.UBVRIJHKsKp'
+  call readBC(rauch,infile)
 
-  outfile='junk.kur'
-  call writeBC(kur,outfile)
+  if(incompatible(blackbody,atlas).or.incompatible(blackbody,rauch)) stop 'tables incompatible'
 
-  master_mags = -99.
-  do j=1,nT
-     !for blackbody only, we ignore logg
-     do k=1,bb% num_spectra
-        if( abs(master_Teff(j) - bb% Teff(k)) < 1d-1 ) master_mags(j,:) = bb% mags(1,1,1,k)
-     enddo
+  call master_bc_init(final,blackbody)
 
-     do i=1,ng
-        !forr ATLAS, check logg
-        do k=1,kur% num_spectra
-           if( abs(master_Teff(j) - kur% Teff(k)) < 1d-1 .and. &
-                abs(master_logg(i) - kur% logg(k)) < 1d-3 ) then 
-              master_mags(j,i) = kur% mags(1,1,1,k)
-              !write(*,*) kur% logg(k), kur% Teff(k)
-           endif
-        enddo
-     enddo
-  enddo
+  !merge the tables based on common Teff,logg points
+  final% mags = -99.
+  call merge_one(blackbody,final,.false.)
+  call merge_one(rauch,final,.true.)
+  call merge_one(atlas,final,.true.)
 
-  open(1,file='master')
-  do j=1,nT
-     write(1,'(99f18.8)') master_Teff(j), master_mags(j,:)
-  enddo
-  close(1)
+  !write the final result
+  call writeBC(final,outfile)
 
 contains
+
+  subroutine merge_one(b,m,check_logg)
+    type(bc_table), intent(in) :: b
+    type(bc_table), intent(inout) :: m
+    logical, intent(in) :: check_logg
+    integer :: i,j,k,l,lo,hi
+
+    do j=1,nT
+       if(check_logg)then
+          do i=1,ng
+             !for ATLAS and Rauch, check logg
+             do k=1,b% num_spectra
+                if( abs(master_Teff(j) - b% Teff(k)) < 1e-1 .and. &
+                     abs(master_logg(i) - b% logg(k)) < 1e-3 ) then 
+                   m% mags(:,:,:,(j-1)*ng+i) = b% mags(:,:,:,k)
+                endif
+             enddo
+          enddo
+       else
+          lo=(j-1)*ng+1
+          hi=j*ng
+          !for blackbody only, we ignore logg
+          do k=1,b% num_spectra
+             if( abs(master_Teff(j) - b% Teff(k)) < 1e-1 ) then
+                do l=lo,hi
+                   m% mags(:,:,:,l) = b% mags(:,:,:,k)
+                enddo
+             endif
+          enddo
+       endif
+    enddo
+
+  end subroutine merge_one
+
+  subroutine master_bc_init(m,b)
+    type(bc_table), intent(out) :: m
+    type(bc_table), intent(in)  :: b
+    integer :: i,j,k
+
+    m% num_filters = b% num_filters
+    m% num_Av = b% num_Av
+    m% num_Rv = b% num_Rv
+    m% FeH = b% FeH
+    m% num_spectra = nT * ng
+
+    allocate(m% header(m% num_filters+5))
+    allocate(m% Teff(m% num_spectra),m% logg(m% num_spectra),m% Rv(m% num_Rv),m% Av(m% num_Av))
+    allocate(m% mags(m% num_filters,m% num_Av,m% num_Rv,m% num_spectra))
+
+    m% header = b% header
+    m% Av = b% Av
+    m% Rv = b% Rv
+
+    call set_master_Teff_logg
+
+    k=1
+    do i=1,nT
+       do j=1,ng
+          m% Teff(k) = master_Teff(i)
+          m% logg(k) = master_logg(j)
+          k = k+1
+       enddo
+    enddo
+
+
+  end subroutine master_bc_init
+
+  logical function incompatible(a,b)
+    type(bc_table), intent(in) :: a,b
+    incompatible = (a% num_Av /= b% num_Av) .or. (a% num_Rv /= b% num_Rv) .or. (a% num_filters /= b% num_filters)
+  end function incompatible
+
+  subroutine set_master_Teff_logg
+    !set the temperature and gravity scales for MIST bolometric correction tables
+    master_Teff(1) = 1.0e3; master_Teff(2) = 1.5e3; master_Teff(3) = 2.0e3; master_Teff(4)=2.5e3
+    master_Teff(5) = 2.8e3; master_Teff(6) = 3.0e3; master_Teff(7) = 3.2e3; master_Teff(8)=3.5e3
+       
+    !  3,750 to    13,000
+    do i=9,46
+       master_Teff(i) = master_Teff(i-1) + 2.5e2
+    enddo
+
+    ! 14,000 to    50,000
+    do i=47,83
+       master_Teff(i) = master_Teff(i-1) + 1.0e3
+    enddo
+  
+    ! 60,000 to   200,000
+    do i=84,98
+       master_Teff(i) = master_Teff(i-1) + 1.0e4
+    enddo
+
+    !200,000 to 1,000,000
+    do i=99,nT
+       master_Teff(i) = master_Teff(i-1) + 1.0e5
+    enddo
+
+    !logg from -1 to +10 in 0.5 dex
+    master_logg(1) = -1.0
+    do i=2,13
+       master_logg(i) = master_logg(i-1) + 0.5
+    enddo
+    do i=14,ng
+       master_logg(i) = master_logg(i-1) + 1.0
+    enddo
+
+  end subroutine set_master_Teff_logg
 
   subroutine readBC(bc,filename)
     type(bc_table), intent(out) :: bc
