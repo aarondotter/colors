@@ -13,6 +13,7 @@
       real(sp) :: Teff, logg, logT
 
       open(1,file=trim(t% filename),status='old',iostat=ierr)
+      if(ierr/=0) return
       read(1,*) !skip the header
       read(1,'(2x,4i8)') t% num_filter, t% num_lines, t% num_Av, t% num_Rv
       read(1,*)

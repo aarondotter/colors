@@ -5,7 +5,7 @@ program table_merge
   integer, parameter :: sp = selected_real_kind(p=5)
   integer, parameter :: dp = selected_real_kind(p=15)
 
-  character(len=256) :: outfile, infile
+  character(len=256) :: outfile, infile, wd_file, bb_file, metallicity
   integer :: ierr, i, j, k
   
   type bc_table
@@ -16,7 +16,7 @@ program table_merge
   end type bc_table
   type(bc_table) :: blackbody, atlas, rauch, final
 
-  integer, parameter :: nT=106, ng=18
+  integer, parameter :: nT=106, ng=20
   real(sp) :: master_Teff(nT), master_logg(ng)
 
   if(command_argument_count()<2)then
@@ -26,17 +26,21 @@ program table_merge
   call get_command_argument(1, infile)
   call get_command_argument(2,outfile)
 
+  !base layer is blackbody spectra
+  bb_file='/home/dotter/science/colors/preprocessor/data/blackbody.FSPS'
+  call readBC(blackbody,bb_file)
+
+  !add Rauch post-AGB/WD models
+  wd_file='/home/dotter/science/colors/preprocessor/data/rauch_solar.FSPS'
+  call readBC(rauch,wd_file)
+
+  !final layer from ATLAS
   call readBC(atlas,infile)
 
-  infile='/home/dotter/science/colors/preprocessor/data/blackbody.UBVRIJHKsKp'
-  call readBC(blackbody,infile)
-
-
-  infile='/home/dotter/science/colors/preprocessor/data/rauch_solar.UBVRIJHKsKp'
-  call readBC(rauch,infile)
-
+  !make sure all the tables are compatible
   if(incompatible(blackbody,atlas).or.incompatible(blackbody,rauch)) stop 'tables incompatible'
 
+  !set up the final results
   call master_bc_init(final,blackbody)
 
   !merge the tables based on common Teff,logg points
@@ -44,6 +48,11 @@ program table_merge
   call merge_one(blackbody,final,.false.)
   call merge_one(rauch,final,.true.)
   call merge_one(atlas,final,.true.)
+
+  if(command_argument_count()==3)then
+     call get_command_argument(3,metallicity)
+     read(metallicity,*) final% FeH
+  endif
 
   !write the final result
   call writeBC(final,outfile)
@@ -55,6 +64,8 @@ contains
     type(bc_table), intent(inout) :: m
     logical, intent(in) :: check_logg
     integer :: i,j,k,l,lo,hi
+
+    m% FeH = b% FeH
 
     do j=1,nT
        if(check_logg)then
@@ -146,12 +157,12 @@ contains
        master_Teff(i) = master_Teff(i-1) + 1.0e5
     enddo
 
-    !logg from -1 to +10 in 0.5 dex
-    master_logg(1) = -1.0
-    do i=2,13
+    !logg from -2 to +10 in 0.5 dex
+    master_logg(1) = -2.0
+    do i=2,15
        master_logg(i) = master_logg(i-1) + 0.5
     enddo
-    do i=14,ng
+    do i=16,ng
        master_logg(i) = master_logg(i-1) + 1.0
     enddo
 

@@ -4,6 +4,8 @@ module colors_def
 
   integer, parameter :: sp = selected_real_kind(p=5)
   integer, parameter :: dp = selected_real_kind(p=15)
+
+  real(sp), parameter :: SolBol = 4.75
   
   type bc_table
      character(len=256) :: filename
