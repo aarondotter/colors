@@ -14,7 +14,7 @@ program table_merge
      character(len=12), allocatable :: header(:)
      integer :: num_Rv, num_Av, num_spectra, num_filters
   end type bc_table
-  type(bc_table) :: blackbody, atlas, rauch, final
+  type(bc_table) :: blackbody, atlas, rauch, final, koester
 
   integer, parameter :: nT=106, ng=20
   real(sp) :: master_Teff(nT), master_logg(ng)
@@ -30,15 +30,18 @@ program table_merge
   bb_file='/home/dotter/science/colors/preprocessor/data/blackbody.FSPS'
   call readBC(blackbody,bb_file)
 
-  !add Rauch post-AGB/WD models
+  !add Rauch and Koester post-AGB/WD models
   wd_file='/home/dotter/science/colors/preprocessor/data/rauch_solar.FSPS'
   call readBC(rauch,wd_file)
+  wd_file='/home/dotter/science/colors/preprocessor/data/Koester_interp.FSPS'
+  call readBc(koester,wd_file)
 
   !final layer from ATLAS
   call readBC(atlas,infile)
 
   !make sure all the tables are compatible
-  if(incompatible(blackbody,atlas).or.incompatible(blackbody,rauch)) stop 'tables incompatible'
+  if(incompatible(blackbody,atlas).or.incompatible(blackbody,rauch) &
+       .or.incompatible(blackbody,koester)) stop 'tables incompatible'
 
   !set up the final results
   call master_bc_init(final,blackbody)
@@ -47,6 +50,7 @@ program table_merge
   final% mags = -99.
   call merge_one(blackbody,final,.false.)
   call merge_one(rauch,final,.true.)
+  call merge_one(koester,final,.true.)
   call merge_one(atlas,final,.true.)
 
   if(command_argument_count()==3)then

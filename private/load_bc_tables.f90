@@ -19,7 +19,7 @@
          call read_one_bin(t,ierr)
       else !read it the old-fashioned way and write a binary 
          call read_one_ascii(t,ierr)
-         call write_one_bin(t,ierr)
+         if(ierr==0) call write_one_bin(t,ierr)
       endif
     end subroutine load_one_bc
 
@@ -43,7 +43,6 @@
       read(1) t% grid
       read(1) t% BC
       close(1)
-      write(*,*) ' read binary file: ', trim(binfile)
     end subroutine read_one_bin
 
     subroutine write_one_bin(t,ierr)
@@ -71,7 +70,10 @@
       real(sp) :: Teff, logg, logT
 
       open(1,file=trim(t% filename),status='old',iostat=ierr)
-      if(ierr/=0) return
+      if(ierr/=0) then
+         write(*,*) ' problem opening ascii file, ierr = ', ierr
+         return
+      endif
       read(1,*) !skip the header
       read(1,'(2x,4i8)') t% num_filter, t% num_lines, t% num_Av, t% num_Rv
       read(1,*)
@@ -145,6 +147,46 @@
       enddo
 
     end subroutine read_one_ascii
+
+    subroutine write_one_ascii(t,output,ierr)
+      type(bc_table), intent(in) :: t
+      character(len=256), intent(in) :: output
+      integer, intent(out) :: ierr
+      integer :: i, j, r
+      integer, allocatable :: x(:)
+      real(sp) :: Teff
+      ierr=0
+      open(1,file=trim(output),iostat=ierr)
+      if(ierr/=0) return
+
+      write(*,*) '  writing bc table to ', trim(output)
+
+      write(1,'(a1,1x,4a8)') '#', 'filters', 'spectra', 'num Av', 'num Rv'
+      write(1,'(a1,1x,4i8)') '#', t% num_filter, t% num_lines, t% num_Av, t% num_Rv
+      write(1,'(a1)') '#'
+
+      allocate(x(t% num_filter+5))
+      do i=1,t% num_filter+5
+         x(i) = i
+      enddo
+
+      do r=1,t% num_Rv
+         do i=1,t% num_Av
+            write(1,'(a1,i7, i5, 3i6, 99(5x,i2,5x))') '#', x
+            write(1,'(a31,199a12)') '#  Teff logg [Fe/H]   Av    Rv ', t% labels(1:t% num_filter)
+            do j=1,t% num_lines
+               Teff = 10**t% grid(1,j)
+               write(1,'(f8.0,f5.1,3f6.2,99f12.6)') Teff, t% grid(2,j), t% FeH, t% Av(i), t% Rv(r), t% BC(:,j,i,r)
+            enddo
+            !skip the blank lines after each table
+            if(i < t% num_Av .and. r < t% num_Rv) then
+               write(1,*)
+               write(1,*)
+            endif
+         enddo
+      enddo
+      close(1)
+    end subroutine write_one_ascii
 
       
   end module load_bc_tables
