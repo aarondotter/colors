@@ -6,13 +6,13 @@ program test_colors
   
   implicit none
 
-  integer :: ierr, i, n, m
+  integer :: ierr, i, j, n, m, iRv, iAv
   type(bc_table), allocatable :: t(:)
   real(sp), allocatable :: res(:), mags(:)
-  real(sp) :: logT, logg, logL, Av, Rv
+  real(sp) :: logT, logg, logL
   character(len=256) :: output
 
-  m=8
+  m=6
   n=9
   allocate(t(n))
 
@@ -26,12 +26,12 @@ program test_colors
   t(8)% filename = '/home/dotter/science/colors/data/feh+0.0.FSPS'
   t(9)% filename = '/home/dotter/science/colors/data/feh+0.3.FSPS'
 
-  do i=m,m
+  do i=1,9
      call load_one_bc(t(i),ierr)
   enddo
   allocate(res(t(m)% num_filter),mags(t(m)% num_filter))
   
-  do i=m,m
+  do i=1,9
      write(*,*) ' i    = ', i
      write(*,*) '[Fe/H]= ', t(i)% FeH
      write(*,*) ' ierr = ', ierr
@@ -43,23 +43,21 @@ program test_colors
 
      if(ierr/=0) stop
 
-     Av   = 0.0
-     Rv   = 3.1
-     logT = 3.15
-     logg = 0.
-     call eval_one_bc(t(m), logT, logg, Av, Rv, res, ierr)
+     iAv   = 1
+     iRv   = 2
+     logT = 3.9
+     logg = 8.7
+     call eval_one_bc(t(m), logT, logg, iAv, iRv, res, ierr)
      write(*,*) logT, logg, res(1:5)
   enddo
 
-  Av=0.1
-  Rv=3.09
+  if(.true.)then
+     open(1,file='iso.txt')
+     open(2,file='iso_cubic.out')
 
-  if(.false.)then
-     open(1,file='iso2.txt')
-     open(2,file='iso2.out')
-     do i=1,580
+     do i=1,982
         read(1,*) logT, logg, logL
-        call eval_one_bc(t(m),logT, logg, Av, Rv, res, ierr)
+        call eval_one_bc(t(m),logT, logg, iAv, iRv, res, ierr)
         if(ierr==0)then
            mags = SolBol - 2.5*logL - res
            write(2,'(99f14.7)') logT, logg, logL, &
@@ -78,27 +76,23 @@ program test_colors
   write(*,*)
   write(*,*) ' ierr = ', ierr
   
-  call interp_koester
-
+  if(.true.) call interp_koester
+  
 contains
 
   subroutine interp_koester
     type(bc_table) :: k1, k2
     character(len=256) :: output
-    integer, parameter :: num_T = 66, num_g=8
-    real(sp) :: master_Teff(num_T), master_logg(num_g), logT, logg, Av, Rv
+    integer, parameter :: num_T = 66, num_g=4
+    real(sp) :: master_Teff(num_T), master_logg(num_g), logT, logg
     integer :: i,j,k,r,a
     real(sp), allocatable :: mags(:)
 
     k1% filename = '../preprocessor/data/Koester.FSPS'
     k2% filename = 'Koester_interp.FSPS'
 
-    print *, 'this  sucks!'
-
     call load_one_bc(k1,ierr)
     if(ierr/=0) return
-
-    print *, 'still sucks!'
 
     k2% num_Av = k1% num_Av
     k2% num_Rv = k1% num_Rv
@@ -109,8 +103,6 @@ contains
     k2% FeH = k1% FeH
     k2% alphaFe = k1% alphaFe
     k2% labels = k1% labels
-
-    print *, 'ok, made it here'
     
     allocate(k2% Av(k2% num_Av), k2% Rv(k2% num_Rv))
     allocate(k2% logT(k2% num_T), k2% logg(k2% num_g))
@@ -124,7 +116,7 @@ contains
 
     master_logg(1) = 6.0
     do i=2,num_g
-       master_logg(i) = master_logg(i-1) + 0.5
+       master_logg(i) = master_logg(i-1) + 1.0
     enddo
 
     master_Teff(1) = 6.0e3
@@ -152,23 +144,15 @@ contains
     k2% BC = 0.
 
     allocate(mags(k2% num_filter))
+
     do r=1,k2% num_Rv
        do a=1,k2% num_Av
           do k=1,k2% num_lines
-             logT = k2% grid(1,k)
-             logg = k2% grid(2,k)
-             Av   = k2% Av(a)
-             Rv   = k2% Rv(r)
-             call eval_one_bc(k1,logT,logg,Av,Rv,mags,ierr)
-             if(ierr==0) k2% BC(:,k,a,r) = mags
+             call eval_one_bc(k1,k2% grid(1,k),k2% grid(2,k),a,r,mags,ierr)
+             if(ierr==0) k2% BC(:,k,a,r)=mags
           enddo
        enddo
     enddo
-
-    write(*,*) master_logg
-    write(*,*) master_Teff
-    
-    print *, 'made it here!'
 
     call write_one_ascii(k2,k2% filename,ierr)
     
