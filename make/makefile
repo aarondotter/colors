@@ -8,7 +8,7 @@ MESA_DIR = /data/mesa7324
 
 include $(MESA_DIR)/utils/makefile_header
 
-ifeq ($(ATM_OFFLOAD),YES)
+ifeq ($(CLR_OFFLOAD),YES)
 CC += -Doffload
 FC += -Doffload
 endif
@@ -17,10 +17,7 @@ endif
 #
 # SOURCE FILES
 
-SRCS = \
-     colors_def.f90 \
-     load_bc_tables.f90 \
-     eval_bc_tables.f90
+SRCS = colors_def.f90 colors_lib.f90 load_bc_tables.f90 eval_bc_tables.f90
 
 #################################################################
 #
