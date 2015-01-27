@@ -17,13 +17,13 @@ endif
 #
 # SOURCE FILES
 
-SRCS = colors_def.f90 colors_lib.f90 load_bc_tables.f90 eval_bc_tables.f90
+SRCS = color_def.f90 color_lib.f90 load_bc_tables.f90 eval_bc_tables.f90
 
 #################################################################
 #
 # TARGETS
 
-LIB = libcolors.a
+LIB = libcolor.a
 LIB_OBJS = $(patsubst %.f,%.o,$(patsubst %.f90,%.o,$(SRCS)))
 $(LIB) : $(LIB_OBJS)
 	$(LIB_TOOL) $(LIB) $(LIB_OBJS)

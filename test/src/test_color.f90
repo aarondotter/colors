@@ -1,7 +1,7 @@
-program test_colors
+program test_color
 
-  use colors_def
-  use colors_lib
+  use color_def
+  use color_lib
   
   implicit none
 
@@ -12,9 +12,9 @@ program test_colors
   character(len=256) :: output, table_list
 
   table_list = 'bc_table.list'
-  call colors_init(table_list,t,ierr)
+  call color_init(table_list,t,ierr)
   if(ierr/=0) then
-     write(*,*) 'colors_init failed with ierr = ', ierr
+     write(*,*) 'color_init failed with ierr = ', ierr
   endif
 
   n=size(t)
@@ -36,7 +36,7 @@ program test_colors
      iRv   = 2
      logT = 3.9
      logg = 8.7
-     call colors_get(t(m), logT, logg, iAv, iRv, res, ierr)
+     call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
      write(*,*) logT, logg, res(1:5)
   enddo
 
@@ -46,7 +46,7 @@ program test_colors
 
      do i=1,982
         read(1,*) logT, logg, logL
-        call colors_get(t(m),logT, logg, iAv, iRv, res, ierr)
+        call color_get(t(m),logT, logg, iAv, iRv, res, ierr)
         if(ierr==0)then
            mags = SolBol - 2.5*logL - res
            write(2,'(99f14.7)') logT, logg, logL, &
@@ -64,7 +64,8 @@ program test_colors
      write(2,'(99a14)') 'logT', 'logg', 'logL', t(8)% labels
      do i=1,581
         read(1,*) logT, logg, logL
-        call colors_get(t(m), logT, logg, iAv, iRv, res, ierr)
+        call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
+        !res holds bolometric corrections
         mags = SolBol - 2.5*logL - res
         write(2,'(99f14.7)') logT, logg, logL, mags
      enddo
@@ -76,7 +77,7 @@ program test_colors
      write(2,'(99a14)') 'logT', 'logg', 'logL', t(8)% labels
      do i=1,570
         read(1,*) logT, logg, logL
-        call colors_get(t(m), logT, logg, iAv, iRv, res, ierr)
+        call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
         mags = SolBol - 2.5*logL - res
         write(2,'(99f14.7)') logT, logg, logL, mags
      enddo
@@ -88,7 +89,7 @@ program test_colors
      write(2,'(99a14)') 'logT', 'logg', 'logL', t(8)% labels
      do i=1,559
         read(1,*) logT, logg, logL
-        call colors_get(t(m), logT, logg, iAv, iRv, res, ierr)
+        call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
         mags = SolBol - 2.5*logL - res
         write(2,'(99f14.7)') logT, logg, logL, mags
      enddo
@@ -185,4 +186,4 @@ contains
     call write_one_ascii(k2,k2% filename,ierr)
     
   end subroutine interp_koester
-end program test_colors
+end program test_color

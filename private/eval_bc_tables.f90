@@ -1,13 +1,14 @@
 module eval_bc_tables
 
-  use colors_def
-    
+  use const_def, only: sp
+  use color_def
+  
   implicit none
-    
+  
   integer, parameter :: interp_linear = 1, interp_cubic = 3
-
+  
 contains
-      
+  
   !interpolate in logT,logg at fixed Av,Rv 
   subroutine eval_one_bc(t,logT,logg,iAv,iRv,res,ierr)
     type(bc_table), intent(in) :: t

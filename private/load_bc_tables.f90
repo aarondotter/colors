@@ -1,6 +1,7 @@
   module load_bc_tables
 
-    use colors_def
+    use const_def, only: sp
+    use color_def
 
     implicit none
 

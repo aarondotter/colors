@@ -1,9 +1,8 @@
-module colors_def
+module color_def
+
+  use const_def, only: sp
 
   implicit none
-
-  integer, parameter :: sp = selected_real_kind(p=5)
-  integer, parameter :: dp = selected_real_kind(p=15)
 
   real(sp), parameter :: SolBol = 4.75
   
@@ -16,4 +15,4 @@ module colors_def
      real(sp) :: FeH, alphaFe
   end type bc_table
     
-end module colors_def
+end module color_def

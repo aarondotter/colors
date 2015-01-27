@@ -1,5 +1,7 @@
-module colors_lib
+module color_lib
 
+  use const_def, only: sp
+  use color_def
   use load_bc_tables
   use eval_bc_tables
 
@@ -7,7 +9,7 @@ module colors_lib
 
 contains
 
-  subroutine colors_init(table_list,t,ierr)
+  subroutine color_init(table_list,t,ierr)
     character(len=256), intent(in) :: table_list
     type(bc_table), allocatable, intent(inout) :: t(:)
     integer, intent(out) :: ierr
@@ -29,15 +31,15 @@ contains
        i=i+1
     enddo
     close(99)
-  end subroutine colors_init
+  end subroutine color_init
 
-  subroutine colors_get(t,logT,logg,iAv,iRv,res,ierr)
+  subroutine color_get(t,logT,logg,iAv,iRv,res,ierr)
     type(BC_table), intent(in) :: t
     real(sp) :: logT, logg
     integer, intent(in) :: iAv, iRv
     real(sp), intent(out) :: res(:) !res(t% num_filter)
     integer, intent(out) :: ierr
     call eval_one_BC(t,logT,logg,iAv,iRv,res,ierr)
-  end subroutine colors_get
+  end subroutine color_get
 
-end module colors_lib
+end module color_lib
