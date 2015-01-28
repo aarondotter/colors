@@ -21,13 +21,13 @@ contains
     allocate(t(n))
     if(ierr/=0) return
     i=1
-    do while(i<n)
+    do while(i<=n)
        read(99,'(a)',iostat=ierr) line
-       if(ierr/=0) return
+       if(ierr/=0) exit
        if(line=='' .or. line(1:1)=='#' .or. line(1:1)=='!') cycle
        read(line,'(a)') t(i)% filename
        call load_one_bc(t(i),ierr)
-       if(ierr/=0) return
+       if(ierr/=0) exit
        i=i+1
     enddo
     close(99)
