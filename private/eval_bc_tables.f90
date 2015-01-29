@@ -8,6 +8,87 @@ module eval_bc_tables
   integer, parameter :: interp_linear = 1, interp_cubic = 3
   
 contains
+
+  !create a table with one fixed value of Av and Rv
+  subroutine create_fixed_Av_Rv(t,u,Av,Rv)
+    type(bc_table), intent(in) :: t
+    type(bc_table), intent(out) :: u
+    real(sp), intent(in) :: Av, Rv
+    real(sp), parameter :: eps = 0.001
+    real(sp) :: q(4)
+    real(sp), allocatable :: res(:)
+    integer :: interp, i11, i, iT, ig, iAv=1, iRv=1
+
+    !interp = interp_linear
+    interp = interp_cubic
+
+    !set table parameters
+    u% filename = 'null and void'
+    u% num_Av  = 1
+    u% num_Rv  = 1
+    u% num_T   = t% num_T
+    u% num_g   = t% num_g
+    u% num_filter = t% num_filter
+    u% num_lines = t% num_lines
+    u% FeH     = t% FeH
+    u% alphaFe = t% alphaFe
+
+    !allocates
+    allocate(u% labels(u% num_filter), u% Av(u% num_Av), u% Rv(u% num_Rv))
+    allocate(u% grid(2,u% num_lines))
+    allocate(u% BC(u% num_filter, u% num_lines, u% num_Av, u% num_Rv))
+    allocate(u% logT(u% num_T), u% logg(u% num_g), u% index(u% num_T, u% num_g))
+    allocate(res(u% num_filter))
+
+    !set static arrays
+    u% labels  = t% labels
+    u% index   = t% index
+    u% logT    = t% logT
+    u% logg    = t% logg
+    u% grid    = t% grid
+    u% Av(1)   = Av
+    u% Rv(1)   = Rv
+
+    do i=1,t% num_Av - 1
+       if(Av>=t% Av(i) .and. Av < t% Av(i+1) )then
+          iAv = i
+          exit
+       endif
+    enddo
+
+    do i=1,t% num_Rv - 1
+       if(Rv>=t% Rv(i) .and. Rv < t% Rv(i+1) )then
+          iRv = i
+          exit
+       endif
+    enddo
+
+    !do the interpolation; even if cubic is chosen, revert 
+    !to linear if on the edge of the grid.
+
+    do iT = 1, u% num_T
+       do ig = 1, u% num_g
+
+          i11 = t% index(iT,ig)
+
+          !do binlinear interpolation for logT, logg and then for Av, Rv
+          do i=1,t% num_filter
+             !first steps are bilinear interpolation in logT, logg
+             q(1) = t% BC(i,i11,iAv  ,iRv  )
+             q(2) = t% BC(i,i11,iAv+1,iRv  )
+             q(3) = t% BC(i,i11,iAv  ,iRv+1)
+             q(4) = t% BC(i,i11,iAv+1,iRv+1)
+             u% BC(i,i11,1,1) = bilinear(t% Av(iAv),t% Av(iAv+1),Av,t% Rv(iRv),t% Rv(iRv+1),Rv,q)
+          enddo
+
+
+
+       enddo
+    enddo
+    
+    
+  end subroutine create_fixed_Av_Rv
+
   
   !interpolate in logT,logg at fixed Av,Rv 
   subroutine eval_one_bc(t,logT,logg,iAv,iRv,res,ierr)

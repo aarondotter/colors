@@ -42,4 +42,18 @@ contains
     call eval_one_BC(t,logT,logg,iAv,iRv,res,ierr)
   end subroutine color_get
 
+  subroutine color_create_fixed_Av_Rv(t,u,Av,Rv)
+    type(bc_table), intent(in) :: t
+    type(bc_table), intent(out) :: u
+    real(sp), intent(in) :: Av, Rv
+    call create_fixed_Av_Rv(t,u,Av,Rv)
+  end subroutine color_create_fixed_Av_Rv
+
+  subroutine color_write_ascii(t,output,ierr)
+    type(bc_table), intent(in) :: t
+    character(len=256) :: output
+    integer, intent(out) :: ierr
+    call write_one_ascii(t,output,ierr)
+  end subroutine color_write_ascii
+
 end module color_lib

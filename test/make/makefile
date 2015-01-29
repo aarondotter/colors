@@ -18,7 +18,7 @@ endif
 # STEP 2: info about the libraries
 
 LOCAL_INCLUDES = -I$(LOCAL_LIB_DIR)
-LOAD_LOCAL = -L$(LOCAL_LIB_DIR) -lcolors
+LOAD_LOCAL = -L$(LOCAL_LIB_DIR) -lcolor
 LOAD_OTHER = #-L$(MESA_LIB_DIR) -linterp_2d -linterp_1d -lnum $(LOAD_MATRIX)
 
 #################################################################
@@ -26,8 +26,7 @@ LOAD_OTHER = #-L$(MESA_LIB_DIR) -linterp_2d -linterp_1d -lnum $(LOAD_MATRIX)
 # STEP 3: build
 
 TEST = tester
-TEST_OBJS = \
-   test_colors.o
+TEST_OBJS = test_color.o
 
 all : $(TEST)
 
@@ -38,9 +37,6 @@ $(TEST) : $(TEST_OBJS)
 
 %.o: $(TEST_SRC_DIR)/%.f90
 	$(TEST_COMPILE) $<
-
-%.mod: %.o
-	@true
 
 clean:
 	-@rm -f *.o *.mod $(TEST_DIR)/$(TEST)

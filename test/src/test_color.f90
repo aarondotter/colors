@@ -7,8 +7,9 @@ program test_color
 
   integer :: ierr, i, j, n, m, iRv, iAv
   type(bc_table), allocatable :: t(:)
+  type(bc_table) :: u
   real(sp), allocatable :: res(:), mags(:)
-  real(sp) :: logT, logg, logL
+  real(sp) :: logT, logg, logL, Av, Rv
   character(len=256) :: output, table_list
 
   table_list = 'bc_table.list'
@@ -39,6 +40,14 @@ program test_color
      call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
      write(*,*) logT, logg, res(1:5)
   enddo
+
+
+  Av=0.10
+  Rv=3.1
+  call color_create_fixed_Av_Rv(t(8),u,Av,Rv)
+  u% filename = 'test.FSPS'
+  call color_write_ascii(u,u% filename,ierr)
+  
 
   if(.false.)then
      open(1,file='iso.txt')
@@ -97,8 +106,6 @@ program test_color
      close(2)
   endif
 
-  !output = 'junk'
-  !call write_one_ascii(t(8),output,ierr)
 
   deallocate(t)
 
