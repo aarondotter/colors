@@ -9,6 +9,77 @@ module eval_bc_tables
   
 contains
 
+  !create a table with all Av,Rv interpolated to input [Fe/H] value.
+  subroutine create_fixed_FeH()
+  end subroutine create_fixed_FeH
+
+  !create a table with one fixed value of Av for tables with only one Rv
+  subroutine create_fixed_Av(t,u,Av)
+    type(bc_table), intent(in) :: t
+    type(bc_table), intent(out) :: u
+    real(sp), intent(in) :: Av
+    real(sp), parameter :: eps = 0.001
+    real(sp), allocatable :: res(:)
+    integer :: interp, i11, i, iT, ig, iAv=1, iRv=1
+
+    !interp = interp_linear
+    interp = interp_cubic
+
+    !set table parameters
+    u% filename = 'null and void'
+    u% num_Av  = 1
+    u% num_Rv  = 1
+    u% num_T   = t% num_T
+    u% num_g   = t% num_g
+    u% num_filter = t% num_filter
+    u% num_lines = t% num_lines
+    u% FeH     = t% FeH
+    u% alphaFe = t% alphaFe
+
+    !allocates
+    allocate(u% labels(u% num_filter), u% Av(u% num_Av), u% Rv(u% num_Rv))
+    allocate(u% grid(2,u% num_lines))
+    allocate(u% BC(u% num_filter, u% num_lines, u% num_Av, u% num_Rv))
+    allocate(u% logT(u% num_T), u% logg(u% num_g), u% index(u% num_T, u% num_g))
+    allocate(res(u% num_filter))
+
+    !set static arrays
+    u% labels  = t% labels
+    u% index   = t% index
+    u% logT    = t% logT
+    u% logg    = t% logg
+    u% grid    = t% grid
+    u% Av(1)   = Av
+    u% Rv(1)   = t% Rv(1)
+
+    do i=1,t% num_Av - 1
+       if(Av>=t% Av(i) .and. Av < t% Av(i+1) )then
+          iAv = i
+          exit
+       endif
+    enddo
+
+    !do the interpolation; even if cubic is chosen, revert 
+    !to linear if on the edge of the grid.
+
+    do iT = 1, u% num_T
+       do ig = 1, u% num_g
+
+          i11 = t% index(iT,ig)
+
+          !do binlinear interpolation for logT, logg and then for Av, Rv
+          do i=1,t% num_filter
+             !first steps are bilinear interpolation in logT, logg
+             u% BC(i,i11,1,1) = linear(t% Av(iAv),t% Av(iAv+1),Av, &
+                  t% BC(i,i11,iAv,1), t% BC(i,i11,iAv+1,1) )
+          enddo
+       enddo
+    enddo
+    
+  end subroutine create_fixed_Av
+
+
+
   !create a table with one fixed value of Av and Rv
   subroutine create_fixed_Av_Rv(t,u,Av,Rv)
     type(bc_table), intent(in) :: t
@@ -80,12 +151,8 @@ contains
              q(4) = t% BC(i,i11,iAv+1,iRv+1)
              u% BC(i,i11,1,1) = bilinear(t% Av(iAv),t% Av(iAv+1),Av,t% Rv(iRv),t% Rv(iRv+1),Rv,q)
           enddo
-
-
-
        enddo
     enddo
-    
     
   end subroutine create_fixed_Av_Rv
 

@@ -34,17 +34,16 @@ program test_color
      write(*,*) 'num_T     = ', t(i)% num_T
 
      iAv   = 1
-     iRv   = 2
+     iRv   = 1
      logT = 3.9
      logg = 8.7
-     call color_get(t(m), logT, logg, iAv, iRv, res, ierr)
+     call color_get(t(i), logT, logg, iAv, iRv, res, ierr)
      write(*,*) logT, logg, res(1:5)
   enddo
 
 
   Av=0.10
-  Rv=3.1
-  call color_create_fixed_Av_Rv(t(8),u,Av,Rv)
+  call color_create_fixed_Av(t(8),u,Av,ierr)
   u% filename = 'test.FSPS'
   call color_write_ascii(u,u% filename,ierr)
   

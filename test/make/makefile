@@ -1,6 +1,6 @@
 # This is the makefile for testing the mesa colors library
 
-MESA_DIR = /data/mesa7324
+#MESA_DIR = $(MESA_DIR)
 
 #################################################################
 

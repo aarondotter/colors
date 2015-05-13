@@ -13,11 +13,13 @@ program table_merge
      real(sp) :: FeH
      character(len=12), allocatable :: header(:)
      integer :: num_Rv, num_Av, num_spectra, num_filters
+     integer, allocatable :: blend(:)
   end type bc_table
   type(bc_table) :: blackbody, atlas, rauch, final, koester
 
   integer, parameter :: nT=106, ng=20
   real(sp) :: master_Teff(nT), master_logg(ng)
+  real(sp), parameter :: eps_T=1e-1, eps_g=1e-3
 
   if(command_argument_count()<2)then
      stop 'not enough command arguments. specify input ATLAS file and output file'
@@ -33,7 +35,7 @@ program table_merge
   !add Rauch and Koester post-AGB/WD models
   wd_file='/home/dotter/science/colors/preprocessor/data/rauch_solar.FSPS'
   call readBC(rauch,wd_file)
-  wd_file='/home/dotter/science/colors/preprocessor/data/Koester_interp.FSPS'
+  wd_file='/home/dotter/science/colors/preprocessor/data/Koester.FSPS'
   call readBc(koester,wd_file)
 
   !final layer from ATLAS
@@ -76,9 +78,17 @@ contains
           do i=1,ng
              !for ATLAS and Rauch, check logg
              do k=1,b% num_spectra
-                if( abs(master_Teff(j) - b% Teff(k)) < 1e-1 .and. &
-                     abs(master_logg(i) - b% logg(k)) < 1e-3 ) then 
+                if( abs(master_Teff(j) - b% Teff(k)) < eps_T .and. &
+                     abs(master_logg(i) - b% logg(k)) < eps_g ) then 
+
                    m% mags(:,:,:,(j-1)*ng+i) = b% mags(:,:,:,k)
+
+!!$                   where(abs(m% mags(:,:,:,(j-1)*ng+i) - missing_value) < eps_T)
+!!$                      m% mags(:,:,:,(j-1)*ng+i) = b% mags(:,:,:,k)
+!!$                   elsewhere
+!!$                      m% mags(:,:,:,(j-1)*ng+i) = 0.5*(m% mags(:,:,:,(j-1)*ng+i)+b% mags(:,:,:,k))
+!!$                   end where
+
                 endif
              enddo
           enddo
@@ -87,7 +97,7 @@ contains
           hi=j*ng
           !for blackbody only, we ignore logg
           do k=1,b% num_spectra
-             if( abs(master_Teff(j) - b% Teff(k)) < 1e-1 ) then
+             if( abs(master_Teff(j) - b% Teff(k)) < eps_T ) then
                 do l=lo,hi
                    m% mags(:,:,:,l) = b% mags(:,:,:,k)
                 enddo
@@ -175,6 +185,7 @@ contains
   subroutine readBC(bc,filename)
     type(bc_table), intent(out) :: bc
     character(len=256) :: filename
+    integer :: i,j,k
     open(1,file=trim(filename),iostat=ierr)
     if(ierr/=0) then
        write(*,*) 'failed to open input file'
@@ -186,6 +197,7 @@ contains
     allocate(bc% header(bc% num_filters+5))
     allocate(bc% Teff(bc% num_spectra),bc% logg(bc% num_spectra),bc% Rv(bc% num_Rv),bc% Av(bc% num_Av))
     allocate(bc% mags(bc% num_filters,bc% num_Av,bc% num_Rv,bc% num_spectra))
+    allocate(bc% blend(bc% num_spectra))
     do j=1,bc% num_Rv
        do k=1,bc% num_Av
           read(1,*) !skip header
@@ -201,6 +213,13 @@ contains
        enddo
     enddo
     close(1)
+
+!!$    do i = 1, bc% num_spectra
+!!$       
+!!$       continue
+!!$       
+!!$    enddo
+
   end subroutine readBC
 
   subroutine writeBC(bc,filename)

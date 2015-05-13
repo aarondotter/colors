@@ -42,6 +42,18 @@ contains
     call eval_one_BC(t,logT,logg,iAv,iRv,res,ierr)
   end subroutine color_get
 
+  subroutine color_create_fixed_Av(t,u,Av,ierr)
+    type(bc_table), intent(in) :: t
+    type(bc_table), intent(out) :: u
+    real(sp), intent(in) :: Av
+    integer, intent(out) :: ierr
+    if(t% num_Rv > 1) then
+       ierr= -1
+    else
+       call create_fixed_Av(t,u,Av)
+    endif
+  end subroutine color_create_fixed_Av
+
   subroutine color_create_fixed_Av_Rv(t,u,Av,Rv)
     type(bc_table), intent(in) :: t
     type(bc_table), intent(out) :: u

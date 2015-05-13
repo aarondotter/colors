@@ -1,6 +1,6 @@
 # This is the makefile for the mesa atm library
 
-MESA_DIR = /data/mesa7324
+#MESA_DIR = /data/mesa7324
 
 #################################################################
 #
